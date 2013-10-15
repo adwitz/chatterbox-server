@@ -5,7 +5,9 @@
  * node module documentation at http://nodejs.org/api/modules.html. */
 
 var querystring = require("querystring");
-var messages = [{"createdAt": Date(), "objectID": "abc", "roomname": "lobby", "text": "Hello", "updatedAt": Date(), "username":"name"}];
+var messages = {
+  results: []
+};
 // var messages = require('./message-data.js');
 var handleRequest = function(request, response) {
   console.log("Serving request type " + request.method + " for url " + request.url);
@@ -19,19 +21,17 @@ var handleRequest = function(request, response) {
     message = "options";
   } else if (request.method === "GET") {
     console.log('get');
-    message = JSON.stringify({results: messages});
+    message = messages;
   } else if (request.method === "POST"){
 
 
     request.on('data', function(data){
-      debugger;
       // var buffer = request.pipe(response);
       message = querystring.parse(querystring.escape(data));
-      message = JSON.parse(Object.keys(message)[0]);
+      message = JSON.stringify(Object.keys(message)[0]);
       console.log("message is: ", message);
-      messages.push(message);
+      messages.results.push(message);
     });
-    // console.log(request.data);
   }
   response.writeHead(statusCode, headers);
   response.end(message);
