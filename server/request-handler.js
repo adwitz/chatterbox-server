@@ -4,51 +4,56 @@
  * from this file and include it in basic-server.js. Check out the
  * node module documentation at http://nodejs.org/api/modules.html. */
 
-var querystring = require("querystring");
-
-var messages = [];
-// var messages = require('./message-data.js');
-var handleRequest = function(request, response) {
-  console.log("Serving request type " + request.method + " for url " + request.url);
-  var message, statusCode = 200;
-  var headers = defaultCorsHeaders;
-  // console.log("request is: ", request);
-  // console.log("response is: ", response);
-  headers['Content-Type'] = "text/plain";
-  if (request.method === "OPTIONS") {
-    console.log('options');
-    message = "options";
-  } else if (request.method === "GET") {
-    console.log('get');
-    message = messages;
-  } else if (request.method === "POST"){
-
-
-    request.on('data', function(data){
-      // var buffer = request.pipe(response);
-      message = querystring.parse(querystring.escape(data));
-      message = JSON.parse(Object.keys(message)[0]);
-      var defaults = {
-        "createdAt": Date(),
-        "objectID": "abc",
-        "roomname": message.roomname,
-        "text": message.text,
-        "updatedAt": Date(),
-        "username": message.username
-      };
-      messages.push(JSON.stringify(defaults));
-      console.log("message is: ", defaults);
-    });
-  }
-  response.writeHead(statusCode, headers);
-  response.end(message);
-};
-
-var defaultCorsHeaders = {
+var headers = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
   "access-control-allow-headers": "content-type, accept",
-  "access-control-max-age": 10 // Seconds.
+  "access-control-max-age": 10, // Seconds.
+  "Content-Type": "application/json"
+};
+
+var messages = [];
+
+var objectID = 0;
+
+var sendResponse = function(response, msg, status){
+  status = status || 200;
+  response.writeHead(status, headers);
+  response.end(msg);
+};
+
+
+var handleRequest = function(request, response) {
+  console.log("Serving request type " + request.method + " for url " + request.url);
+
+  var message;
+  var caseObj = {};
+
+  caseObj.options = function(){
+    sendResponse(response, '');
+  };
+
+  caseObj.get = function(){
+    sendResponse(response, JSON.stringify(messages));
+  };
+
+  caseObj.post = function(){
+    var data = '';
+    request.on('data', function(chunk){
+      data += chunk;
+    });
+    request.on('end', function(){
+      message = JSON.parse(data);
+      objectID++;
+      message.objectID = objectID;
+      message.createdAt = Date();
+      messages.push(message);
+      sendResponse(response, "{}");
+    });
+  };
+
+  var key = request.method.toLowerCase();
+  caseObj[key]();
 };
 
 module.exports.handleRequest = handleRequest;
